@@ -1,4 +1,4 @@
-package com.nopadding.internal;
+package com.nopadding.internal.handler;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -8,12 +8,12 @@ import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class RelayHandler extends ChannelInboundHandlerAdapter {
+public class HttpProxyRelayHandler extends ChannelInboundHandlerAdapter {
 
-  private final Channel relayChannel;
+  private final Channel clientChannel;
 
-  public RelayHandler(Channel relayChannel) {
-    this.relayChannel = relayChannel;
+  HttpProxyRelayHandler(Channel clientChannel) {
+    this.clientChannel = clientChannel;
   }
 
   @Override
@@ -23,8 +23,8 @@ public class RelayHandler extends ChannelInboundHandlerAdapter {
 
   @Override
   public void channelRead(ChannelHandlerContext ctx, Object msg) {
-    if (relayChannel.isActive()) {
-      relayChannel.writeAndFlush(msg);
+    if (clientChannel.isActive()) {
+      clientChannel.writeAndFlush(msg);
     } else {
       ReferenceCountUtil.release(msg);
     }
@@ -32,8 +32,8 @@ public class RelayHandler extends ChannelInboundHandlerAdapter {
 
   @Override
   public void channelInactive(ChannelHandlerContext ctx) {
-    if (relayChannel.isActive()) {
-      ServerUtils.closeOnFlush(relayChannel);
+    if (clientChannel.isActive()) {
+      ServerUtils.closeOnFlush(clientChannel);
     }
   }
 

@@ -1,14 +1,13 @@
 package com.nopadding.internal;
 
+import com.nopadding.internal.handler.HttpProxyServerHandler;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import java.io.FileReader;
@@ -26,7 +25,9 @@ import org.apache.commons.cli.ParseException;
 @Slf4j
 public class SpnegoProxy {
 
-  private EventLoopGroup eventLoop;
+  private static final String PROP_FILE_NAME = "application.properties";
+
+  private final EventLoopGroup eventLoop;
   private final Properties properties;
 
   /**
@@ -34,45 +35,43 @@ public class SpnegoProxy {
    */
   public SpnegoProxy(Properties properties) {
     this.properties = properties;
-    System.setProperty(
-        "javax.security.auth.useSubjectCredsOnly", "false");
-    System.setProperty("java.security.auth.login.config", properties.getProperty("sp.jaas.path"));
+    eventLoop = new NioEventLoopGroup();
   }
 
   /**
    * Common run.
    */
   public void run() throws InterruptedException {
-    final String bindAddress = properties.getProperty("sp.bind.address");
-    final int port = Integer.parseInt(properties.getProperty("sp.port"));
-    this.eventLoop = new NioEventLoopGroup();
+    System.setProperty("java.security.krb5.kdc",
+        properties.getProperty("java.security.krb5.kdc"));
+    System.setProperty("java.security.krb5.realm",
+        properties.getProperty("java.security.krb5.realm"));
+
+    final String bindAddress = properties.getProperty(SpnegoProxyConstant.SP_BIND_ADDRESS);
+    final int port = Integer.parseInt(properties.getProperty(SpnegoProxyConstant.SP_PORT));
+
     ServerBootstrap serverBootstrap = new ServerBootstrap();
     serverBootstrap.group(eventLoop);
     serverBootstrap.channel(NioServerSocketChannel.class);
     serverBootstrap.handler(new LoggingHandler(LogLevel.DEBUG));
-
     serverBootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
       @Override
       protected void initChannel(SocketChannel ch) {
-        ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG));
-        ch.pipeline().addLast("HttpServerCodec", new HttpServerCodec());
-        ch.pipeline().addLast("HttpObjectAggregator", new HttpObjectAggregator(10485760));
+        ch.pipeline().addLast("HttpRequestDecoder", new HttpRequestDecoder());
         ch.pipeline().addLast(new HttpProxyServerHandler(properties));
       }
     });
-    ChannelFuture channelFuture = serverBootstrap
-        .bind(new InetSocketAddress(bindAddress, port)).sync();
-    channelFuture.channel().closeFuture().sync();
+    serverBootstrap.bind(new InetSocketAddress(bindAddress, port)).sync();
   }
 
-  private void shutdown() throws InterruptedException {
+  private void shutdown() {
     eventLoop.shutdownGracefully();
   }
 
   private static CommandLine parseCmd(String[] args) throws ParseException {
     CommandLineParser parser = new DefaultParser();
     Options options = new Options();
-    options.addOption(new Option("p", "prop", true, "Properties file localtion."));
+    options.addOption(new Option("c", "config", true, "Config location."));
     return parser.parse(options, args);
   }
 
@@ -82,11 +81,21 @@ public class SpnegoProxy {
    * @param args -p application.properties
    */
   public static void main(String[] args)
-      throws InterruptedException, ParseException, IOException {
-    CommandLine cmd = parseCmd(args);
-    String propFile = cmd.getOptionValue('p');
+      throws InterruptedException, IOException {
+    CommandLine cmd;
+    String propFile = null;
+    try {
+      cmd = parseCmd(args);
+      propFile = cmd.getOptionValue('c');
+    } catch (ParseException e) {
+      e.printStackTrace();
+    }
     Properties properties = new Properties();
-    properties.load(new FileReader(propFile));
+    if (propFile == null) {
+      properties.load(SpnegoProxy.class.getClassLoader().getResourceAsStream(PROP_FILE_NAME));
+    } else {
+      properties.load(new FileReader(propFile));
+    }
     SpnegoProxy mainObj = new SpnegoProxy(properties);
     Runtime.getRuntime().addShutdownHook(new Thread("shutdown-hook") {
       @Override

@@ -1,4 +1,4 @@
-package com.nopadding.internal;
+package com.nopadding.internal.handler;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -8,12 +8,12 @@ import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class HttpProxyRelayHandler extends ChannelInboundHandlerAdapter {
+public class RelayHandler extends ChannelInboundHandlerAdapter {
 
   private final Channel relayChannel;
 
-  HttpProxyRelayHandler(Channel clientChannel) {
-    this.relayChannel = clientChannel;
+  public RelayHandler(Channel relayChannel) {
+    this.relayChannel = relayChannel;
   }
 
   @Override

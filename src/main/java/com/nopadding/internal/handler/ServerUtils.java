@@ -1,4 +1,4 @@
-package com.nopadding.internal;
+package com.nopadding.internal.handler;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;

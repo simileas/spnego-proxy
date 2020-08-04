@@ -29,7 +29,38 @@ com.sun.security.jgss.initiate {
 };
 ```
 
+配置文件
+
+````properties
+# config items
+
+# 本地
+sp.bind.address = 0.0.0.0
+sp.port = 8100
+
+# 拦截请求注入 header 的 domain，如果请求的地址是 *.in.nopadding.com，会被注入 token。
+sp.domain = in.nopadding.com
+
+# kerberos 用户名和密码
+sp.username = admin
+sp.password = pa$$word
+
+# KDC realm
+java.security.krb5.realm = IN.NOPADDING.COM
+
+# krb5kdc 地址
+java.security.krb5.kdc = ux4.in.nopadding.com
+````
+
 ## Build
+
+代码样式检查：
+
+````shell script
+./gradlew check
+````
+
+生成发布版本：
 
 ````shell script
 ./gradlew distTar -info
@@ -37,8 +68,8 @@ com.sun.security.jgss.initiate {
 
 ## TODO
 
-- Configuration injector
-- 复用 outbound channel
-- 只对返回  **`401 Unauthorized`** 的请求加入 token
-- HTTPS
-- 更简洁的 Kerberos 配置方式
+- [ ] Configuration injector
+- [x] 复用 outbound channel
+- [ ] 只对返回  **`401 Unauthorized`** 的请求加入 token
+- [ ] 完善 HTTPS 请求的处理
+- [x] 更简洁的 Kerberos 配置方式
