@@ -12,23 +12,6 @@
 
 所以想用 HTTP 代理的方式解决访问 web 页面的问题。
 
-jaas 文件示例:
-
-```text
-com.sun.security.jgss.initiate {
-  com.sun.security.auth.module.Krb5LoginModule required
-  debug=false
-  useTicketCache=true
-  storeKey=false
-  doNotPrompt=true
-  renewTGT=true
-  useKeyTab=true
-  isInitiator=true
-  keyTab="/home/admin/admin.keytab"
-  principal="admin";
-};
-```
-
 配置文件
 
 ````properties
